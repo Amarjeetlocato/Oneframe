@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Image to PDF (Adjustable Layout)</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        text-align: center;
+    }
+
+    #drop-area {
+        border: 2px dashed #777;
+        padding: 30px;
+        width: 80%;
+        margin: auto;
+        border-radius: 10px;
+        cursor: pointer;
+        background: #fafafa;
+    }
+
+    #page {
+        width: 794px;  /* A4 width in px (96 DPI) */
+        height: 1123px; /* A4 height */
+        margin: 20px auto;
+        border: 1px solid #aaa;
+        position: relative;
+        background: white;
+        overflow: hidden;
+    }
+
+    .draggable {
+        position: absolute;
+        cursor: move;
+        max-width: 300px;
+    }
+
+    #downloadBtn {
+        padding: 10px 20px;
+        margin-top: 20px;
+        font-size: 18px;
+    }
+</style>
+</head>
+<body>
+
+<h2>Drag & Drop / Choose Images → Arrange on Page → Download PDF</h2>
+
+<input type="file" id="fileInput" multiple accept="image/*"><br><br>
+
+<div id="drop-area">
+    <h3>Drag & Drop Images Here</h3>
+</div>
+
+<h3>Arrange Images Below:</h3>
+<div id="page"></div>
+
+<button id="downloadBtn">Download PDF</button>
+
+<!-- html2canvas + jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+    const dropArea = document.getElementById("drop-area");
+    const page = document.getElementById("page");
+    const fileInput = document.getElementById("fileInput");
+
+    // Prevent default
+    ["dragenter","dragover","dragleave","drop"].forEach(event => {
+        dropArea.addEventListener(event, e => e.preventDefault());
+    });
+
+    dropArea.addEventListener("drop", e => {
+        let files = e.dataTransfer.files;
+        handleFiles(files);
+    });
+
+    fileInput.addEventListener("change", e => {
+        handleFiles(e.target.files);
+    });
+
+    function handleFiles(files) {
+        for (let file of files) {
+            if (file.type.startsWith("image/")) {
+                let img = document.createElement("img");
+                img.src = URL.createObjectURL(file);
+                img.classList.add("draggable");
+                img.style.left = "50px";
+                img.style.top = "50px";
+                img.style.width = "200px";
+                makeDraggable(img);
+                page.appendChild(img);
+            }
+        }
+    }
+
+    function makeDraggable(el) {
+        let offsetX = 0, offsetY = 0;
+
+        el.onmousedown = function(e) {
+            offsetX = e.clientX - el.offsetLeft;
+            offsetY = e.clientY - el.offsetTop;
+
+            document.onmousemove = function(e) {
+                el.style.left = (e.clientX - offsetX) + "px";
+                el.style.top = (e.clientY - offsetY) + "px";
+            };
+
+            document.onmouseup = () => {
+                document.onmousemove = null;
+            };
+        };
+    }
+
+    document.getElementById("downloadBtn").onclick = async () => {
+        const canvas = await html2canvas(page);
+        const imgData = canvas.toDataURL("image/png");
+        const pdf = new jspdf.jsPDF("p", "px", [794, 1123]);
+        pdf.addImage(imgData, "PNG", 0, 0, 794, 1123);
+        pdf.save("your_pdf.pdf");
+    };
+</script>
+
+</body>
+</html>
